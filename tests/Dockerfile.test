@@ -1,8 +1,9 @@
 # Dockerfile.test - Isolated test environment for safety hooks
+# Runs REAL Claude Code with hooks enabled to verify protection works
 FROM ubuntu:22.04
 
 LABEL org.opencontainers.image.title="agent-discipline-test"
-LABEL org.opencontainers.image.description="Isolated test environment for safety hooks"
+LABEL org.opencontainers.image.description="E2E test environment for safety hooks with real Claude Code"
 
 # Avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,15 +17,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     sqlite3 \
     ca-certificates \
+    curl \
+    npm \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code globally
+RUN npm install -g @anthropic-ai/claude-code
 
 # Create test user (non-root for realistic testing)
 RUN useradd -m -s /bin/bash testuser
 
 # Create directory structure
-# Tests live in /tests/ to mirror host directory structure
+# /fixtures: Read-only mount from host with test data
+# /working:  Writable working directory where fixtures are COPIED before tests
+#            This is where Claude operates during E2E tests
+# /hooks:    Alternative hook mount location for unit/integration tests
+# /results:  Writable mount for test output
 RUN mkdir -p /fixtures /working /hooks /tests/harness /results \
-    && chown -R testuser:testuser /working /results
+    && chown -R testuser:testuser /working /results /home/testuser
 
 # Copy harness scripts
 COPY --chown=testuser:testuser harness/ /tests/harness/
@@ -32,7 +42,7 @@ COPY --chown=testuser:testuser harness/ /tests/harness/
 # Copy test files
 COPY --chown=testuser:testuser unit/ /tests/unit/
 COPY --chown=testuser:testuser integration/ /tests/integration/
-COPY --chown=testuser:testuser destruction/ /tests/destruction/
+COPY --chown=testuser:testuser e2e/ /tests/e2e/
 
 # Make all scripts executable
 RUN find /tests -name '*.sh' -exec chmod +x {} \;
@@ -47,6 +57,14 @@ USER testuser
 RUN git config --global user.email "test@example.com" \
     && git config --global user.name "Test User" \
     && git config --global init.defaultBranch main
+
+# API key will be mounted at runtime via:
+#   -v ~/.claude/.credentials.json:/home/testuser/.claude/.credentials.json:ro
+# Or via environment variable:
+#   -e ANTHROPIC_API_KEY=sk-...
+
+# Hooks are mounted at runtime via:
+#   -v .claude/hooks:/home/testuser/.claude/hooks:ro
 
 # Default entrypoint runs test harness
 ENTRYPOINT ["/tests/harness/runner.sh"]

@@ -45,6 +45,7 @@ source "$SCRIPT_DIR/lib/hooks.sh"
 
 TEST_MODE="${TEST_MODE:-all}"
 VERBOSE="${VERBOSE:-0}"
+USE_LLM="${USE_LLM:-1}"  # Default: E2E tests enabled
 
 # =============================================================================
 # Argument parsing
@@ -54,19 +55,21 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --unit) TEST_MODE="unit" ;;
         --integration) TEST_MODE="integration" ;;
-        --destruction) TEST_MODE="destruction" ;;
+        --e2e) TEST_MODE="e2e" ;;
         --all) TEST_MODE="all" ;;
+        --no-llm) USE_LLM=0 ;;
         --verbose|-v) VERBOSE=1 ;;
         --help|-h)
-            echo "Usage: $0 [--unit|--integration|--destruction|--all] [--verbose]"
+            echo "Usage: $0 [--unit|--integration|--e2e|--all] [--no-llm] [--verbose]"
             echo ""
             echo "Test modes:"
             echo "  --unit          Run unit tests only (pattern matching)"
             echo "  --integration   Run integration tests (hook behavior)"
-            echo "  --destruction   Run destruction verification tests"
+            echo "  --e2e           Run E2E tests (real Claude Code)"
             echo "  --all           Run all tests (default)"
             echo ""
             echo "Options:"
+            echo "  --no-llm        Skip E2E tests (no API calls)"
             echo "  --verbose, -v   Show detailed output"
             echo "  --help, -h      Show this help"
             exit 0
@@ -80,6 +83,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 export VERBOSE
+export USE_LLM
 
 # =============================================================================
 # Output helpers
@@ -172,17 +176,26 @@ run_nested_test_suite() {
 
 main() {
     echo "TAP version 13"
-    echo "# Starting test run: mode=$TEST_MODE"
+    echo "# Starting test run: mode=$TEST_MODE, use_llm=$USE_LLM"
     echo "#"
 
-    # Verify hooks exist
-    if [[ ! -d "$HOOKS_DIR" ]]; then
+    # Verify hooks exist (for unit/integration tests)
+    if [[ ! -d "$HOOKS_DIR" ]] && [[ "$TEST_MODE" != "e2e" ]]; then
         echo "# WARNING: Hooks directory not found at $HOOKS_DIR"
-        echo "# Tests that invoke hooks will fail"
+        echo "# Unit/integration tests that invoke hooks will fail"
     else
-        # List hooks for debugging
         log "Hooks directory contents:"
         ls -la "$HOOKS_DIR" 2>/dev/null | while read -r line; do log "  $line"; done || true
+    fi
+
+    # Verify Claude Code available (for E2E tests)
+    if [[ "$USE_LLM" -eq 1 ]] && [[ "$TEST_MODE" == "e2e" || "$TEST_MODE" == "all" ]]; then
+        if ! command -v claude &>/dev/null; then
+            echo "# WARNING: Claude Code not found in PATH"
+            echo "# E2E tests will fail"
+        else
+            log "Claude Code version: $(claude --version 2>/dev/null || echo 'unknown')"
+        fi
     fi
 
     case "$TEST_MODE" in
@@ -192,13 +205,21 @@ main() {
         integration)
             run_nested_test_suite "$SCRIPT_DIR/../integration"
             ;;
-        destruction)
-            run_test_suite "$SCRIPT_DIR/../destruction"
+        e2e)
+            if [[ "$USE_LLM" -eq 0 ]]; then
+                echo "# SKIPPED: E2E tests disabled (--no-llm)"
+            else
+                run_test_suite "$SCRIPT_DIR/../e2e"
+            fi
             ;;
         all)
             run_test_suite "$SCRIPT_DIR/../unit/bash"
             run_nested_test_suite "$SCRIPT_DIR/../integration"
-            run_test_suite "$SCRIPT_DIR/../destruction"
+            if [[ "$USE_LLM" -eq 1 ]]; then
+                run_test_suite "$SCRIPT_DIR/../e2e"
+            else
+                echo "# SKIPPED: E2E tests disabled (--no-llm)"
+            fi
             ;;
     esac
 

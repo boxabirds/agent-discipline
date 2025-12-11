@@ -1,0 +1,11 @@
+{
+  "env": {},
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": ["./hooks/scripts/post-commit-backlog.sh"]
+      }
+    ]
+  }
+}

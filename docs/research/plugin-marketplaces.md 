@@ -1,0 +1,26 @@
+
+**Official Distribution Model (Plugins)**
+
+Hooks are now distributed as part of **plugins** via the `/plugin` command:
+```bash
+# Add a marketplace (GitHub repo)
+/plugin marketplace add user-or-org/repo-name
+
+# Browse and install
+/plugin install plugin-name@marketplace-name
+```
+
+**Notable Community Marketplaces**
+- Dan Ávila's marketplace offers plugins for DevOps automation, documentation generation, project management, and testing suites
+- Seth Hobson has curated over 80 specialized sub-agents
+- `ccplugins/marketplace` — curated collection
+- `zpaper-com/ClaudeKit` — agents, commands, and hooks bundle
+
+**Team Distribution**
+
+Add `.claude/settings.json` to your repository with marketplace and plugin configurations. When team members trust the repository folder, Claude Code automatically installs specified plugins.
+
+**For Discoverability Concerns**
+
+There are third-party aggregators like `claudecodemarketplace.com` and `claudecodeplugin.com` that scrape GitHub for marketplaces — claudemarketplaces.com automatically scrapes GitHub to find new ones every hour. However, be aware these are **unverified** and have security implications (the PromptArmor article highlights real risks with malicious plugins bypassing permission guardrails).
+

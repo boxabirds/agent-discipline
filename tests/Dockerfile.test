@@ -1,0 +1,53 @@
+# Dockerfile.test - Isolated test environment for safety hooks
+FROM ubuntu:22.04
+
+LABEL org.opencontainers.image.title="agent-discipline-test"
+LABEL org.opencontainers.image.description="Isolated test environment for safety hooks"
+
+# Avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    python3 \
+    jq \
+    git \
+    sqlite3 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create test user (non-root for realistic testing)
+RUN useradd -m -s /bin/bash testuser
+
+# Create directory structure
+# Tests live in /tests/ to mirror host directory structure
+RUN mkdir -p /fixtures /working /hooks /tests/harness /results \
+    && chown -R testuser:testuser /working /results
+
+# Copy harness scripts
+COPY --chown=testuser:testuser harness/ /tests/harness/
+
+# Copy test files
+COPY --chown=testuser:testuser unit/ /tests/unit/
+COPY --chown=testuser:testuser integration/ /tests/integration/
+COPY --chown=testuser:testuser destruction/ /tests/destruction/
+
+# Make all scripts executable
+RUN find /tests -name '*.sh' -exec chmod +x {} \;
+
+# Set working directory
+WORKDIR /working
+
+# Default to testuser
+USER testuser
+
+# Configure git for test user
+RUN git config --global user.email "test@example.com" \
+    && git config --global user.name "Test User" \
+    && git config --global init.defaultBranch main
+
+# Default entrypoint runs test harness
+ENTRYPOINT ["/tests/harness/runner.sh"]
+CMD ["--all"]

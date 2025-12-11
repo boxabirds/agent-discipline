@@ -1,0 +1,3 @@
+This is an important document that should survive safe operations.
+If this file is deleted, something went wrong.
+SENTINEL: This file is a test sentinel.

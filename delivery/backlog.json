@@ -4,5 +4,42 @@
     "project": "agent-discipline",
     "updated_by": null
   },
-  "stories": []
+  "stories": [
+    {
+      "id": 1,
+      "title": "Basic Protection",
+      "description": "Implement safety hooks plugin to block dangerous commands and protect sensitive files in Claude Code",
+      "status": "planned",
+      "tasks": [
+        {
+          "id": 1,
+          "title": "Create dangerous-command-guard hook",
+          "description": "Implement bash script that blocks destructive commands and requires confirmation for risky operations",
+          "status": "planned",
+          "assignee": null
+        },
+        {
+          "id": 2,
+          "title": "Create protected-files-guard hook",
+          "description": "Implement Python script that prevents modifications to sensitive files",
+          "status": "planned",
+          "assignee": null
+        },
+        {
+          "id": 3,
+          "title": "Create plugin manifest",
+          "description": "Create manifest.json with hook definitions and plugin metadata",
+          "status": "planned",
+          "assignee": null
+        },
+        {
+          "id": 4,
+          "title": "Configure project settings",
+          "description": "Update .claude/settings.json to register hooks",
+          "status": "planned",
+          "assignee": null
+        }
+      ]
+    }
+  ]
 }

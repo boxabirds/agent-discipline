@@ -1,0 +1,2 @@
+This file can be safely deleted in tests.
+EXPENDABLE: This file is expected to be deleted.

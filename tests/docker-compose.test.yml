@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      # Fixtures mounted read-only
+      - ./fixtures:/fixtures:ro
+      # Results writable for output
+      - ./results:/results
+      # Hooks under test (for development iteration)
+      - ../.claude/hooks:/hooks:ro
+    environment:
+      - TEST_MODE=${TEST_MODE:-all}
+      - VERBOSE=${VERBOSE:-0}
+    # Security: limit capabilities
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    # Resource limits prevent runaway tests
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
